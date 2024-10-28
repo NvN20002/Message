@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signature App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400&display=swap" rel="stylesheet"> <!-- Manrope font -->
+    <style>
+        body {
+            font-family: 'Manrope', sans-serif; /* Use Manrope font */
+            background-color: #f4f4f4; /* Light background */
+            color: #333; /* Dark text color */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #004080; /* Dark blue header */
+            font-weight: normal; /* Regular weight */
+        }
+
+        div {
+            background: white; /* White background for the input boxes */
+            border-radius: 8px; /* Rounded corners */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            padding: 20px;
+            margin: 10px 0;
+            width: 100%; /* Full width */
+            max-width: 600px; /* Limit width */
+        }
+
+        textarea {
+            width: 100%; /* Full width */
+            height: 100px;
+            resize: none; /* Prevent resizing */
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc; /* Light border */
+            border-radius: 4px; /* Rounded corners */
+            font-family: 'Manrope', sans-serif; /* Font styling */
+            font-size: 16px; /* Font size */
+        }
+
+        button {
+            background-color: #007BFF; /* Blue background */
+            color: white; /* White text */
+            border: none; /* No border */
+            border-radius: 4px; /* Rounded corners */
+            padding: 10px 15px; /* Padding */
+            cursor: pointer; /* Pointer on hover */
+            font-size: 16px; /* Font size */
+            transition: background-color 0.3s; /* Smooth transition */
+            width: 100%; /* Full width */
+            margin: 5px 0; /* Margin */
+        }
+
+        button:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+        }
+
+        #send {
+            background-color: #28a745; /* Green for the send button */
+        }
+
+        #send:hover {
+            background-color: #218838; /* Darker green on hover */
+        }
+
+        p {
+            font-size: 14px; /* Font size for paragraph */
+            margin-top: 10px; /* Top margin */
+        }
+
+        /* Centering the elements */
+        .center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Message Signature App</h1>
+
+    <div class="center">
+        <h2>Sender</h2>
+        <textarea id="message" placeholder="Enter your message here"></textarea>
+        <button id="sign">Sign</button>
+        <textarea id="signatureTextArea" placeholder="Signature will appear here..." readonly></textarea>
+        <button id="send">Send</button>
+    </div>
+
+    <div class="center">
+        <h2>Receiver</h2>
+        <textarea id="receiverTextArea" placeholder="Received message will appear here..." readonly></textarea>
+        <button id="verify">Verify Message</button>
+        <p id="verificationResult"></p>
+    </div>
+
+    <script>
+        let signedMessage = '';
+
+        // Sign the message
+        document.getElementById('sign').addEventListener('click', async () => {
+            const message = document.getElementById('message').value;
+
+            // Sign the message
+            const response = await fetch('http://localhost:5000/sign', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message }),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                signedMessage = data.signature; // Save the signature for later verification
+                document.getElementById('signatureTextArea').value = signedMessage; // Display the signature in the text area
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        });
+
+        // Send the message to the receiver
+        document.getElementById('send').addEventListener('click', () => {
+            const message = document.getElementById('message').value; // Get the original message
+
+            // Simulate receiving the message and display it
+            document.getElementById('receiverTextArea').value = message; // Show the received message
+        });
+
+        // Verify the message
+        document.getElementById('verify').addEventListener('click', async () => {
+            const receivedMessage = document.getElementById('receiverTextArea').value; // Get the message from the receiver's text area
+            const originalMessage = document.getElementById('message').value; // Get the original message for comparison
+
+            // Verify the signature
+            const response = await fetch('http://localhost:5000/verify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: receivedMessage,
+                    signature: signedMessage
+                }),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                // Check if the messages match
+                if (data.isValid) {
+                    if (receivedMessage === originalMessage) {
+                        document.getElementById('verificationResult').textContent = 'The message sender sent and the message you received are the same before and after hashing.';
+                    } else {
+                        document.getElementById('verificationResult').textContent = 'The signature is valid, but the messages do not match.';
+                    }
+                } else {
+                    document.getElementById('verificationResult').textContent = 'The signature is invalid.';
+                }
+            } else {
+                document.getElementById('verificationResult').textContent = `Error: ${data.error}`;
+            }
+        });
+    </script>
+</body>
+</html>
